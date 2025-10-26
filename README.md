@@ -42,3 +42,18 @@
 * cardboard model first?
 
 ![](./car1top.jpg)
+
+## Steering
+Idea:
+* get current heading
+* set target heading (based on desired offset)
+ * register in compass (with degree of error)
+* start motion, callback to stop
+* compass triggers callback once reaching the desired position
+ * stop motors
+
+Implementation:
+* compass: separate thread
+ * API: standard granularity (5°?), register callback: target heading, function, once / repeatedly
+ * store headings & callbacks, every loop (200 readings / second -> 0.005 wait time) delay -> check headings & whether to trigger some callback
+  * store callbacks in Hashmap & read current [head - granularity / 2, head + granularity / 2] -> for each retrieved heading, callback pair -> call callback
