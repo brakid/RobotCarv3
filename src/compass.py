@@ -1,8 +1,10 @@
 from collections import defaultdict
 import random
+import statistics
 from threading import Lock, Thread
 import time
 from typing import Callable, Dict, List
+from collections import deque
 
 type Callback = Callable[[int], None]
 
@@ -13,6 +15,7 @@ class Compass:
         self.callbacks: Dict[int, List[Callback]] = defaultdict(list)
         self.thread = None
         self.running = False
+        self.headings = deque([], maxlen=5)
 
     def register_callback(self, heading: int, callback: Callback):
         with self.lock:
@@ -41,5 +44,11 @@ class Compass:
     def _loop(self):
         while self.running:
             heading = random.randrange(-360, 360, 1)
-            self._run_callbacks(heading)
+            with self.lock:
+                self.headings.append(heading)
+            self._run_callbacks(self.get_heading())
             time.sleep(0.1)
+
+    def get_heading(self):
+        with self.lock:
+            return statistics.mean(self.headings)
