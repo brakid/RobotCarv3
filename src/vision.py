@@ -12,18 +12,14 @@ from timer import timer
 
 WIDTH = 640
 HEIGHT = 480
-FPS = 15
+FPS = 30
 
 class TargetDetector:
     def __init__(self, camera_index: int = 0, confidence: float = 0.7, object_class: int = 0):
         self.logger = logging.getLogger('TargetDetector')
         self.capture_thread = None
         self.detect_thread = None
-        self.camera = cv2.VideoCapture(0)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
-        self.camera.set(cv2.CAP_PROP_FPS, FPS)
-        self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        self.camera = None
         self.model = YOLO('yolo12n.pt')
         self.model(np.zeros((640, 480, 3)))
         self.confidence = confidence
@@ -38,6 +34,13 @@ class TargetDetector:
     def start(self):
         self.running = True
 
+        self.camera = cv2.VideoCapture(0)
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
+        self.camera.set(cv2.CAP_PROP_FPS, FPS)
+        self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
+
         # Start capture thread
         self.camera_thread = Thread(target=self._capture)
         self.camera_thread.daemon = True
@@ -49,16 +52,19 @@ class TargetDetector:
 
     def _capture(self):
         self.logger.info('Capture thread started')
+        counter = 0
         while self.running:
             try:
-                has_image, image = self.camera.read()
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                with self.image_lock:
-                    self.image = image
-                    self.has_image = has_image
-                
+                for _ in range(2):
+                    self.camera.grab()
+                has_image, image = self.camera.retrieve()
+                self.logger.debug("Retrieved: %s, %s, %s", has_image, type(image), counter)
+                if has_image:
+                    with self.image_lock:
+                        self.image = image
+                        self.has_image = True
             finally:
-                time.sleep(1.0 / FPS)
+                time.sleep(1.0 / (FPS-1))
 
     def _find_object(self, yolo_results: Results, object_class: int, confidence: float) -> Optional[Tuple[int, int, int, int]]:
         for result in yolo_results:
@@ -86,6 +92,7 @@ class TargetDetector:
                         self.has_image = False
 
                 if has_image:
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     results = self._call_model(image)
     
                     found_object = self._find_object(results, self.object_class, self.confidence)
