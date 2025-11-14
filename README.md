@@ -2,8 +2,14 @@
 
 ## Objectives:
 ### P0: no obstacles
-* robot car can drive towards a static target
-* robot car can follow a moving target
+* robot car can drive towards a static target ✅
+* robot car can follow a moving target ✅
+
+Goal achieved using [Mobile Net SSD](https://github.com/chuanqi305/MobileNet-SSD) for person detection, the robot can follow an object, assuming there are not obstacles in the way. 
+
+The robot uses a multi-threaded approach for: image capturing & person detection, sending control commands to the motors for setting the driving direction.
+
+Using Mobile Net SSD instead of [Yolo v12n](https://docs.ultralytics.com/models/yolo12/) the latency to detect a person dropped from 0.35 sec to 0.095 sec (-73% detection latency) on a [Raspberry Pi 5 - 8GB](https://www.raspberrypi.com/products/raspberry-pi-5/) allowing for ~10 FPS.
 ### P1: obstacles
 * robot car can drive towards a static target *redirecting when bumping into obstacles*
 * robot car can follow a moving target *redirecting when bumping into obstacles*
@@ -13,9 +19,9 @@
 
 ## Robot Design
 ### P0:
-* vacuum Robot Style: circular, 2 main wheels, caster wheels front and back
-* camera Holder (looking to the front)
-* battery holders for 9V battery (and powerbank? Small one?)
+* [Vacuum Robot inspired design](https://cookierobotics.com/056/): circular body-shape, 2 main wheels, caster wheel in the back
+* camera mount (looking to the front)
+* battery holders for 9V battery (and powerbank)
 ### P1:
 * front: button bar to detect contact - 3 separate buttons: half-left, front, half-right
 * expand adding Sonic Senor & Compass for Self-Localization

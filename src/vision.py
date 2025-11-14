@@ -9,19 +9,18 @@ from threading import Thread, Lock
 import time
 import logging
 from timer import timer
+from abc import ABC, abstractmethod
 
 WIDTH = 640
 HEIGHT = 480
 FPS = 30
 
-class TargetDetector:
-    def __init__(self, camera_index: int = 0, confidence: float = 0.7, object_class: int = 0):
-        self.logger = logging.getLogger('TargetDetector')
+class TargetDetector(ABC):
+    def __init__(self, camera_index: int = 0, confidence: float = 0.7, object_class: int = 1, logger_name: str = 'TargetDetector'):
+        self.logger = logging.getLogger(logger_name)
         self.capture_thread = None
         self.detect_thread = None
         self.camera = None
-        self.model = YOLO('yolo12n.pt')
-        self.model(np.zeros((640, 480, 3)))
         self.confidence = confidence
         self.object_class = object_class
         self.image: Optional[any] = None
@@ -32,6 +31,8 @@ class TargetDetector:
         self.running = False
 
     def start(self):
+        self._call_model(np.zeros((640, 480, 3)))
+        
         self.running = True
 
         self.camera = cv2.VideoCapture(0)
@@ -66,18 +67,13 @@ class TargetDetector:
             finally:
                 time.sleep(1.0 / (FPS-1))
 
-    def _find_object(self, yolo_results: Results, object_class: int, confidence: float) -> Optional[Tuple[int, int, int, int]]:
-        for result in yolo_results:
-            boxes = result.boxes
-            self.logger.debug('Boxes: %s', boxes)
-            if (boxes.cls[0] == object_class) and (boxes.conf[0] >= confidence):
-                (x, y, w, h) = boxes.xywh[0]
-                return (int(x), int(y), int(w), int(h))
-        return None
+    @abstractmethod
+    def _find_object(self, results, image, object_class: int, confidence_threshold: float) -> Optional[Tuple[int, int, int, int]]:
+        pass
 
-    @timer
+    @abstractmethod
     def _call_model(self, image):
-        return self.model(image, verbose=False)[0]
+        pass
 
     def _detect(self):
         self.logger.info('Detect thread started')
@@ -95,7 +91,7 @@ class TargetDetector:
                     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     results = self._call_model(image)
     
-                    found_object = self._find_object(results, self.object_class, self.confidence)
+                    found_object = self._find_object(results, image, self.object_class, self.confidence)
                     if found_object:
                         x, y, _, _ = found_object
                         self.logger.debug('Finding: %s %s', x, y)
@@ -114,3 +110,56 @@ class TargetDetector:
     def stop(self):
         self.running = False
         del self.camera
+
+
+
+# wget https://github.com/chuanqi305/MobileNet-SSD/raw/master/deploy.prototxt
+# wget https://github.com/chuanqi305/MobileNet-SSD/raw/master/mobilenet_iter_73000.caffemodel
+
+class TargetDetectorMobileNet(TargetDetector):
+    def __init__(self, camera_index: int = 0, confidence: float = 0.7, object_class: int = 15):
+        super().__init__(camera_index, confidence, object_class, 'TargetDetectorMobileNet')
+        self.mobile_net = cv2.dnn.readNetFromCaffe(
+            'deploy.prototxt',
+            'mobilenet_iter_73000.caffemodel'
+        )
+
+    def _find_object(self, results, image, object_class: int, confidence_threshold: float) -> Optional[Tuple[int, int, int, int]]:
+        for i in range(results.shape[2]):
+            confidence = results[0, 0, i, 2]
+            
+            if confidence > confidence_threshold:
+                object_class_id = int(results[0, 0, i, 1])
+    
+                if object_class_id == object_class:
+                    height, width = image.shape[:2]
+                    box = results[0, 0, i, 3:7] * np.array([width, height, width, height])
+                    (x1, y1, x2, y2) = box.astype('int')
+                    return (int((x2-x1)//2+x1), int((y2-y1)//2+y1), int(x2-x1), int(y2-y1)) #midpoint
+        return None
+
+    @timer
+    def _call_model(self, image):
+        blob = cv2.dnn.blobFromImage(image, 0.007843, (300, 300), 127.5)
+        self.mobile_net.setInput(blob)
+        return self.mobile_net.forward()
+
+
+
+class TargetDetectorYolo(TargetDetector):
+    def __init__(self, camera_index: int = 0, confidence: float = 0.5, object_class: int = 0):
+        super().__init__(camera_index, confidence, object_class, 'TargetDetectorYolo')
+        self.model = YOLO('yolo12n.pt')
+
+    def _find_object(self, results: Results, image, object_class: int, confidence: float) -> Optional[Tuple[int, int, int, int]]:
+        for result in results:
+            boxes = result.boxes
+            self.logger.debug('Boxes: %s', boxes)
+            if (boxes.cls[0] == object_class) and (boxes.conf[0] >= confidence):
+                (x, y, w, h) = boxes.xywh[0]
+                return (int(x), int(y), int(w), int(h))
+        return None
+
+    @timer
+    def _call_model(self, image):
+        return self.model(image, verbose=False)[0]
