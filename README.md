@@ -49,6 +49,17 @@ Using Mobile Net SSD instead of [Yolo v12n](https://docs.ultralytics.com/models/
 
 ![](./car1top.jpg)
 
+## Distance sensing using ultra-sonic sound
+![](./distance_sensor.jpg)
+* sweep the positions ahead (-45° - +45° (0° = straight ahead))
+* measure the distance
+* stop the car if any object ahead is getting too close ("emergency stop")
+* use the detected object shapes to decide how to navigate across them (is an object on the right side -> derive around on the left - path-finding algorithm)
+
+### Issues:
+* ultra-sonic sound distances can fluctuate & are propne for polished object surfaces (*average over multiple sensor reads*)
+* the sensor ([HC-SR04](https://howtomechatronics.com/tutorials/arduino/ultrasonic-sensor-hc-sr04/#hc-sr04-hardware-overview)) itself has a 15° measuring angle, meaning the object boundaries are fuzzy
+
 ## Steering
 Idea:
 * get current heading
