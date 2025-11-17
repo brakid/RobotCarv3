@@ -50,7 +50,7 @@ Using Mobile Net SSD instead of [Yolo v12n](https://docs.ultralytics.com/models/
 ![](./car1top.jpg)
 
 ## Distance sensing using ultra-sonic sound
-* sweep the positions ahead (-30° - +30° (0° = straight ahead))
+* sweep the positions ahead (-15° - +15° (0° = straight ahead))
 * measure the distance
 * stop the car if any object ahead is getting too close ("emergency stop")
 * use the detected object shapes to decide how to navigate across them (is an object on the right side -> derive around on the left - path-finding algorithm)
@@ -63,6 +63,7 @@ Using Mobile Net SSD instead of [Yolo v12n](https://docs.ultralytics.com/models/
 * as each reading covers a ~15° range, collect all overlapping readings per position, get the average in case the different readings overlap (variance < 0.3) -> sharper object edge detection
 
 ![](./distance_sensing_smoothed.jpeg)
+![](./car2sensors.jpg)
 
 ## Steering
 Idea:

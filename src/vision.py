@@ -98,7 +98,7 @@ class TargetDetector(ABC):
                         with self.target_lock:
                             self.target = (x, y)                
             except Exception as e:
-                print('Error', e)
+                self.logger.error('Error', e)
 
     def get_target(self):
         with self.target_lock:

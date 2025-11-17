@@ -27,20 +27,20 @@ class MotorController:
             self.running = True
             self.thread = threading.Thread(target=self._control_loop, daemon=True)
             self.thread.start()
-            print("Motor controller started")
+            self.logger.info('Motor controller started')
     
     def stop(self):
         self.board.stop()
         self.running = False
         if self.thread:
             self.thread.join()
-        print("Motor controller stopped")
+        self.logger.info('Motor controller stopped')
     
     def send_direction(self, direction, duration: float = 0.5):
         self.direction_queue.put((direction, duration))
 
     def _control_loop(self):
-        print("Motor control loop started")
+        self.logger.info('Motor control loop started')
 
         command_until = 0
         
@@ -51,7 +51,7 @@ class MotorController:
                 while not self.direction_queue.empty():
                     direction, duration = self.direction_queue.get_nowait()
                 if direction:
-                    print(f"Direction: {direction}, duration: {duration}ms")
+                    self.logger.debug(f'Direction: {direction}, duration: {duration}ms')
                     if direction == Direction.FORWARD:
                         self.board.forward(SPEED)
                     elif direction == Direction.LEFT:
@@ -70,4 +70,4 @@ class MotorController:
 
             time.sleep(0.01)
         
-        print("Motor control loop stopped")
+        self.logger.info('Motor control loop stopped')
