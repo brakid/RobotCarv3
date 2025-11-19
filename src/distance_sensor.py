@@ -41,13 +41,13 @@ class DistanceSensor:
             self.running = True
             self.thread = Thread(target=self._distance_loop, daemon=True)
             self.thread.start()
-            logging.info('Distance controller started')
+            logging.info('Distance sensor started')
     
     def stop(self):
         self.running = False
         if self.thread:
             self.thread.join()
-        logging.info('Distance controller stopped')
+        logging.info('Distance sensor stopped')
 
     def _get_distance(self, attempts: int = 2) -> float:
         sum = 0.0
@@ -71,7 +71,7 @@ class DistanceSensor:
         return coordinates
     
     def _distance_loop(self):
-        self.logger.info('Motor control loop started')
+        self.logger.info('Distance sensor loop started')
 
         is_reversed = False
         
@@ -85,7 +85,7 @@ class DistanceSensor:
                 if np.median(distances[:, 1]) < self.emergency_stop_distance_threshold:
                     self.emergency_stop_callback()
         
-        self.logger.info('Motor control loop stopped')
+        self.logger.info('Distance sensor loop started')
 
     def get_distances(self) -> Optional[np.array]:
         with self.lock:
